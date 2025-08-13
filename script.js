@@ -111,16 +111,20 @@
 // });
 
 // Mobile menu functionality
+
+// Mobile menu functionality + improved anchor link scroll
+
 document.addEventListener("DOMContentLoaded", () => {
   const menuIcon = document.getElementById("menu");
   const closeIcon = document.getElementById("close");
   const navList = document.querySelector(".nav-links ul");
   const backdrop = document.querySelector(".menu-backdrop");
 
+  // Close mobile menu
   const closeMobileMenu = () => {
-    navList.classList.remove("show");
-    closeIcon.style.display = "none";
-    menuIcon.style.display = "block";
+    if (navList) navList.classList.remove("show");
+    if (closeIcon) closeIcon.style.display = "none";
+    if (menuIcon) menuIcon.style.display = "block";
     if (document.body.classList) {
       document.body.classList.remove("menu-open");
     }
@@ -129,11 +133,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // Open mobile menu
   if (menuIcon) {
     menuIcon.addEventListener("click", () => {
-      navList.classList.add("show");
+      if (navList) navList.classList.add("show");
       menuIcon.style.display = "none";
-      closeIcon.style.display = "block";
+      if (closeIcon) closeIcon.style.display = "block";
       if (document.body.classList) {
         document.body.classList.add("menu-open");
       }
@@ -143,58 +148,44 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Close button click
   if (closeIcon) {
     closeIcon.addEventListener("click", () => {
       closeMobileMenu();
     });
   }
 
-  // Improved anchor link handling for Android compatibility
+  // Smooth scroll with header offset (iOS + Android friendly)
+  const scrollToTarget = (target) => {
+    const headerOffset = 80; // adjust this to match sticky header height
+    const elementPosition = target.getBoundingClientRect().top + window.scrollY;
+    const offsetPosition = elementPosition - headerOffset;
+
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: "smooth",
+    });
+  };
+
   const navLinks = document.querySelectorAll('a[href^="#"]');
   navLinks.forEach((link) => {
     link.addEventListener("click", (e) => {
       const href = link.getAttribute("href");
-      const id = href.slice(1);
-      const target = document.getElementById(id);
-
-      // Only prevent default if target exists
-      if (!target) {
-        return;
-      }
+      if (!href || href === "#") return;
+      const target = document.getElementById(href.slice(1));
+      if (!target) return;
 
       const wasMenuOpen = navList && navList.classList.contains("show");
+      e.preventDefault();
 
-      // Close menu first if open
       if (wasMenuOpen) {
-        e.preventDefault();
         closeMobileMenu();
-
-        // Use shorter delay for better Android compatibility
+        // Delay to wait for CSS transition to finish
         setTimeout(() => {
-          // Try native smooth scroll first, fallback to instant
-          try {
-            target.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            });
-          } catch (error) {
-            // Fallback for older Android browsers
-            target.scrollIntoView(true);
-          }
-        }, 200);
+          scrollToTarget(target);
+        }, 350); // match your CSS transition duration
       } else {
-        // Let browser handle naturally when menu is closed
-        try {
-          e.preventDefault();
-          target.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        } catch (error) {
-          // If smooth scroll fails, allow default behavior
-          e.stopImmediatePropagation();
-          return true;
-        }
+        scrollToTarget(target);
       }
     });
   });
@@ -205,7 +196,7 @@ if ("scrollRestoration" in history) {
   history.scrollRestoration = "manual";
 }
 
-// Animation observer
+// Intersection Observer animations
 document.addEventListener("DOMContentLoaded", () => {
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
@@ -226,26 +217,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const marquee = document.getElementById("reviews-marquee");
   const track = document.getElementById("reviews-track");
 
-  if (!marquee || !track) {
-    return;
-  }
+  if (!marquee || !track) return;
 
   const ensureLoopWidth = () => {
     const containerWidth = marquee.clientWidth;
     let trackWidth = track.scrollWidth;
     const items = Array.from(track.children);
-    let safety = 20;
+    let safety = 20; // prevent infinite loop
 
     while (trackWidth < containerWidth * 2 && safety > 0) {
       items.forEach((el) => {
         track.appendChild(el.cloneNode(true));
       });
       trackWidth = track.scrollWidth;
-      safety = safety - 1;
+      safety--;
     }
   };
 
   ensureLoopWidth();
+
+  // Handle resize (for rotation / screen change)
+  window.addEventListener("resize", ensureLoopWidth);
 
   marquee.addEventListener("mouseenter", () => {
     marquee.classList.add("paused");
